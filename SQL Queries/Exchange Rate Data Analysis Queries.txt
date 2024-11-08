@@ -1,0 +1,144 @@
+USE DATABASE EXCHANGE_RATE_DATA;
+
+-- 1. Latest Exchange Rate Comparison
+-- This query compares the latest exchange rates from both tables for each currency and highlights any significant changes.
+
+WITH latest_rates AS (
+    SELECT 
+        CURRENCY,
+        MAX(date) AS latest_date,
+        MAX(exchange_rate) AS latest_exchange_rate
+    FROM 
+        exchange_rate_data.exchange_rate_schema.currency_exchange_rate
+    GROUP BY 
+        CURRENCY
+),
+latest_rates_2 AS (
+    SELECT 
+        CURRENCY,
+        MAX(date) AS latest_date,
+        MAX(exchange_rate) AS latest_exchange_rate
+    FROM 
+        exchange_rate_data.exchange_rate_schema.currency_exchange_rate_2
+    GROUP BY 
+        CURRENCY
+)
+SELECT 
+    COALESCE(e1.CURRENCY, e2.CURRENCY) AS CURRENCY,
+    e1.latest_exchange_rate AS rate_table_1,
+    e2.latest_exchange_rate AS rate_table_2,
+    CASE 
+        WHEN e1.latest_exchange_rate IS NOT NULL AND e2.latest_exchange_rate IS NOT NULL THEN 
+            e2.latest_exchange_rate - e1.latest_exchange_rate
+        ELSE NULL 
+    END AS rate_difference
+FROM 
+    latest_rates e1
+FULL OUTER JOIN 
+    latest_rates_2 e2 ON e1.CURRENCY = e2.CURRENCY
+ORDER BY 
+    CURRENCY;
+
+
+
+-- 2. Percentage Change in Exchange Rates
+-- This query calculates the percentage change in exchange rates for currencies present in both tables.
+
+WITH latest_rates AS (
+    SELECT 
+        CURRENCY,
+        MAX(date) AS latest_date,
+        MAX(exchange_rate) AS latest_exchange_rate
+    FROM 
+        exchange_rate_data.exchange_rate_schema.currency_exchange_rate
+    GROUP BY 
+        CURRENCY
+),
+latest_rates_2 AS (
+    SELECT 
+        CURRENCY,
+        MAX(date) AS latest_date,
+        MAX(exchange_rate) AS latest_exchange_rate
+    FROM 
+        exchange_rate_data.exchange_rate_schema.currency_exchange_rate_2
+    GROUP BY 
+        CURRENCY
+)
+SELECT 
+    e1.CURRENCY,
+    e1.latest_exchange_rate AS rate_table_1,
+    e2.latest_exchange_rate AS rate_table_2,
+    CASE 
+        WHEN e1.latest_exchange_rate IS NOT NULL AND e2.latest_exchange_rate IS NOT NULL THEN 
+            ((e2.latest_exchange_rate - e1.latest_exchange_rate) / e1.latest_exchange_rate) * 100
+        ELSE NULL 
+    END AS percentage_change
+FROM 
+    latest_rates e1
+JOIN 
+    latest_rates_2 e2 ON e1.CURRENCY = e2.CURRENCY
+ORDER BY 
+    percentage_change DESC;
+
+
+-- 3. Top 10 Most Volatile Currencies
+-- This query identifies the top 10 currencies with the largest fluctuations in exchange rates between the two tables.
+
+WITH latest_rates AS (
+    SELECT 
+        CURRENCY,
+        MAX(date) AS latest_date,
+        MAX(exchange_rate) AS latest_exchange_rate
+    FROM 
+        exchange_rate_data.exchange_rate_schema.currency_exchange_rate
+    GROUP BY 
+        CURRENCY
+),
+latest_rates_2 AS (
+    SELECT 
+        CURRENCY,
+        MAX(date) AS latest_date,
+        MAX(exchange_rate) AS latest_exchange_rate
+    FROM 
+        exchange_rate_data.exchange_rate_schema.currency_exchange_rate_2
+    GROUP BY 
+        CURRENCY
+)
+SELECT 
+    e1.CURRENCY,
+    e1.latest_exchange_rate AS rate_table_1,
+    e2.latest_exchange_rate AS rate_table_2,
+    ABS(e2.latest_exchange_rate - e1.latest_exchange_rate) AS volatility
+FROM 
+    latest_rates e1
+JOIN 
+    latest_rates_2 e2 ON e1.CURRENCY = e2.CURRENCY
+ORDER BY 
+    volatility DESC
+LIMIT 10;
+
+-- 4. Average Exchange Rate for Each Currency
+-- This query calculates the average exchange rate for each currency across both tables.
+
+WITH all_rates AS (
+    SELECT 
+        CURRENCY,
+        exchange_rate
+    FROM 
+        exchange_rate_data.exchange_rate_schema.currency_exchange_rate
+    UNION ALL
+    SELECT 
+        CURRENCY,
+        exchange_rate
+    FROM 
+        exchange_rate_data.exchange_rate_schema.currency_exchange_rate_2
+)
+SELECT 
+    CURRENCY,
+    AVG(exchange_rate) AS average_exchange_rate
+FROM 
+    all_rates
+GROUP BY 
+    CURRENCY
+ORDER BY 
+    average_exchange_rate DESC;

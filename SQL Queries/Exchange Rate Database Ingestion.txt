@@ -1,0 +1,39 @@
+CREATE DATABASE EXCHANGE_RATE_DATA;
+CREATE SCHEMA EXCHANGE_RATE_SCHEMA;
+
+CREATE OR ALTER TABLE exchange_rate_data.exchange_rate_schema.exchange_rate (
+currency VARCHAR,  
+date DATE,             
+time Time,            
+rate FLOAT             
+);
+
+select * from exchange_rate_data.exchange_rate_schema.exchange_rate;
+
+CREATE SCHEMA file_format_schema;
+CREATE OR REPLACE file format exchange_rate_data.file_format_schema.format_csv
+    type = 'CSV'
+    field_delimiter = ','
+    RECORD_DELIMITER = '\n'
+    skip_header = 1
+    error_on_column_count_mismatch = FALSE;
+
+CREATE SCHEMA stage_schema;
+CREATE OR REPLACE STAGE exchange_rate_data.stage_schema.exchange_rate_stage_yml 
+    url="s3://exchange-rate-zone/"
+    credentials=(aws_key_id='xxxxxxxxxxxxxx'
+    aws_secret_key='xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+    FILE_FORMAT = exchange_rate_data.file_format_schema.format_csv;
+
+LIST @exchange_rate_data.stage_schema.exchange_rate_stage_yml;
+
+
+CREATE OR REPLACE SCHEMA exchange_rate_data.snowpipe_schema;
+
+CREATE OR REPLACE PIPE exchange_rate_data.snowpipe_schema.exchange_rate_snowpipe
+auto_ingest = TRUE
+AS 
+COPY INTO exchange_rate
+FROM @exchange_rate_data.stage_schema.exchange_rate_stage_yml;
+
+DESC PIPE exchange_rate_data.snowpipe_schema.exchange_rate_snowpipe;

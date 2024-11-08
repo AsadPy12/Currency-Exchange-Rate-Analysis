@@ -1,0 +1,9 @@
+sudo apt update
+sudp apt install python3-pip python3.12-venv
+python3 -m venv exchange_rate_venv
+source exchange_rate_venv/bin/activate
+pip3 install pandas
+pip3 install awscli
+aws configure
+pip install apache-airflow
+airflow standalone (ports: 8080)
